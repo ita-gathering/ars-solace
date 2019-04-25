@@ -18,7 +18,7 @@ public class Activity {
     private String author;
     private String title;
     private String content;
-    private List<User> participants;
+    private List<ParticipateSituation> participateSituation;
     private LocalDateTime startDate;
     private LocalDateTime closingDate;
 

@@ -4,6 +4,7 @@ import com.approval.dto.AcitivitySearchCriteria;
 import com.approval.dto.ActivityDto;
 import com.approval.dto.UserDto;
 import com.approval.po.Activity;
+import com.approval.po.ParticipateSituation;
 import com.approval.po.User;
 import com.approval.repository.ActivityRepository;
 import com.approval.repository.UserRepository;
@@ -23,6 +24,7 @@ import java.util.Objects;
 @Service
 public class ActivityService {
 
+    public static final String PENDING = "pending";
     @Resource
     private ActivityRepository activityRepository;
     @Resource
@@ -85,7 +87,7 @@ public class ActivityService {
         return activityDtos;
     }
 
-    public String participateActivity(String activityId, String username) {
+    public String participateActivity(String activityId, String username, String awards) {
         User user = userRepository.findByUserName(username);
         if (Objects.isNull(user)) {
             return "can not find user";
@@ -94,17 +96,20 @@ public class ActivityService {
         if (Objects.isNull(activity)) {
             return "can not find activity";
         }
-        if (activity.getParticipants() != null) {
-            boolean hasParticipate = activity.getParticipants().stream()
-                    .anyMatch(participant -> participant.getUserName().equals(user.getUserName()));
+        List<ParticipateSituation> existedParticipateSituation = activity.getParticipateSituation();
+        ParticipateSituation participateSituation = new ParticipateSituation(user, awards, PENDING);
+        if (existedParticipateSituation != null) {
+            boolean hasParticipate = existedParticipateSituation.stream()
+                    .anyMatch(situation -> situation.getParticipant().getUserName().equals(user.getUserName()));
             if (hasParticipate) {
                 return "has already participate";
             }
-            activity.getParticipants().add(user);
-        } else {
-            List<User> users = new ArrayList<>();
-            users.add(user);
-            activity.setParticipants(users);
+            existedParticipateSituation.add(participateSituation);
+        }
+        else {
+            List<ParticipateSituation> participateSituations = new ArrayList<>();
+            participateSituations.add(participateSituation);
+            activity.setParticipateSituation(participateSituations);
         }
         activityRepository.save(activity);
         messageSender.sendMessageToTopic(OUTPUT_TOPIC, "send message");

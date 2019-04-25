@@ -77,24 +77,15 @@ public class ActivityController {
     @PatchMapping("/{activityId}")
     public ResponseDto participateActivity(@PathVariable String activityId, @RequestBody JSONObject jsonObject) {
         String username = (String) jsonObject.get("userName");
+        String awards = (String) jsonObject.get("awards");
         if (Objects.isNull(username)) {
             return ResponseDto.fail("userName should not be empty");
         }
-        String result = activityService.participateActivity(activityId, username);
+        String result = activityService.participateActivity(activityId, username, awards);
         if (StringUtils.isEmpty(result)) {
             return ResponseDto.success();
         }
         return ResponseDto.fail(result);
-    }
-
-    @GetMapping("/solace")
-    public void receivedMessage() {
-        messageSender.sendMessageToTopic("AAATOPIC", "send");
-    }
-
-    @GetMapping("/solace/exception")
-    public void exceptionMessage() {
-//        messageSender.sendMessageCreatorToTopic("EXCEPTION", new ErrorMessageCreator(originMessage, new RuntimeException()));
     }
 
 }
