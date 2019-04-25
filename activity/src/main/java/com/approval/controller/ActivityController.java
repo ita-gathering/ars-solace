@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.approval.dto.AcitivitySearchCriteria;
 import com.approval.dto.ResponseDto;
 import com.approval.po.Activity;
+import com.approval.po.ParticipateRequest;
 import com.approval.service.ActivityService;
 import com.approval.solace.MessageSender;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -14,6 +15,8 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
+import javax.websocket.server.PathParam;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -87,6 +90,12 @@ public class ActivityController {
             return ResponseDto.success();
         }
         return ResponseDto.fail(result);
+    }
+
+    @GetMapping("/request")
+    public ResponseDto getAllRequestByUserName(@PathParam("userName") String userName) {
+        List<ParticipateRequest> participateRequest = activityService.getAllRequestByUserName(userName);
+        return ResponseDto.success(participateRequest);
     }
 
 }

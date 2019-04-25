@@ -1,17 +1,12 @@
 package com.approval.service;
 
 import com.approval.dto.AcitivitySearchCriteria;
-import com.approval.dto.ActivityDto;
-import com.approval.dto.UserDto;
-import com.approval.po.Activity;
-import com.approval.po.ApprovalTask;
-import com.approval.po.ParticipateSituation;
-import com.approval.po.User;
+import com.approval.po.*;
 import com.approval.repository.ActivityRepository;
+import com.approval.repository.ParticipateRequestRepository;
 import com.approval.repository.UserRepository;
 import com.approval.solace.MessageSender;
 import com.approval.utils.JsonUtils;
-import com.approval.utils.WrappedBeanCopier;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.springframework.stereotype.Service;
 
@@ -32,6 +27,8 @@ public class ActivityService {
     private ActivityRepository activityRepository;
     @Resource
     private UserRepository userRepository;
+    @Resource
+    private ParticipateRequestRepository participateRequestRepository;
     @Resource
     private MessageSender messageSender;
     private static final String OUTPUT_TOPIC = "ARS/ACTIVITY";
@@ -94,24 +91,29 @@ public class ActivityService {
         if (Objects.isNull(activity)) {
             return "can not find activity";
         }
-        List<ParticipateSituation> existedParticipateSituation = activity.getParticipateSituation();
-        ParticipateSituation participateSituation = new ParticipateSituation(user, awards, PENDING);
-        if (existedParticipateSituation != null) {
-            boolean hasParticipate = existedParticipateSituation.stream()
-                    .anyMatch(situation -> situation.getParticipant().getUserName().equals(user.getUserName()));
+        if (activity.getParticipants() != null) {
+            boolean hasParticipate = activity.getParticipants().stream()
+                    .anyMatch(participant -> participant.getUserName().equals(user.getUserName()));
             if (hasParticipate) {
                 return "has already participate";
             }
-            existedParticipateSituation.add(participateSituation);
         }
-        else {
-            List<ParticipateSituation> participateSituations = new ArrayList<>();
-            participateSituations.add(participateSituation);
-            activity.setParticipateSituation(participateSituations);
-        }
-        activityRepository.save(activity);
-        ApprovalTask approvalTask = new ApprovalTask(activityId,participateSituation);
-        messageSender.sendMessageToTopic(OUTPUT_TOPIC, JsonUtils.objectToJson(approvalTask));
+        ParticipateRequest participateRequest = new ParticipateRequest(activityId,activity.getTitle(),username, PENDING);
+        participateRequest = participateRequestRepository.save(participateRequest);
+        messageSender.sendMessageToTopic(OUTPUT_TOPIC, JsonUtils.objectToJson(participateRequest));
         return "";
     }
+
+    public List<ParticipateRequest> getAllRequestByUserName(String userName) {
+        return participateRequestRepository.findAllByUserName(userName);
+    }
+
+//    public void updateParticipateStatus(ApprovalTask approvalTask) {
+//        Activity activity = activityRepository.findById(approvalTask.getActivityId()).orElse(null);
+//        ParticipateSituation participateSituation1 = activity.getParticipateSituation().stream()
+//                .filter(participateSituation -> participateSituation.getParticipant().getUserName().equals(approvalTask.getParticipateSituation().getParticipant().getUserName()))
+//                .findFirst().orElse(null);
+//        participateSituation1.setStatus(approvalTask.getParticipateSituation().getStatus());
+//        activityRepository.save(activity);
+//    }
 }
