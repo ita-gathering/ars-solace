@@ -1,19 +1,15 @@
 package com.approval;
 
 import com.approval.po.Activity;
-import com.approval.po.ApprovalTask;
 import com.approval.po.ParticipateRequest;
 import com.approval.po.User;
 import com.approval.repository.ActivityRepository;
 import com.approval.repository.ParticipateRequestRepository;
 import com.approval.repository.UserRepository;
 import com.approval.solace.MessageSender;
-import com.approval.solace.SolaceBrokerException;
 import com.approval.utils.JsonUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jms.annotation.JmsListener;
-import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,7 +26,7 @@ import java.util.List;
 @Component
 @Slf4j
 public class ParticipateApprovalBroker {
-    public static final String PASS = "pass";
+    public static final String ACCEPT = "accept";
     public static final String REJECT = "reject";
     private final String LISTENED_QUEUE = "ARS/ACTIVITY/EVT";
     private static final String DEFAULT_CONCURRENCY = "10";
@@ -53,25 +49,25 @@ public class ParticipateApprovalBroker {
         processApproval(participateRequest);
     }
 
-@Transactional
+    @Transactional
     public void processApproval(ParticipateRequest participateRequest) {
         //todo:approval logic
         Activity activity = activityRepository.findById(participateRequest.getActivityId()).orElse(null);
-//        ParticipateRequest existedParticipateRequest = participateRequestRepository.findByActivityIdAndUserName(participateRequest.getActivityId(),participateRequest.getUserName());
         ParticipateRequest existedParticipateRequest = participateRequestRepository.findById(participateRequest.getId()).orElse(null);
         if (activity.getRemainCount() > 0) {
-            existedParticipateRequest.setStatus(PASS);
+            existedParticipateRequest.setStatus(ACCEPT);
+
             activity.setRemainCount(activity.getRemainCount() - 1);
             User participant = userRepository.findByUserName(existedParticipateRequest.getUserName());
-            if (activity.getParticipants()==null){
+            if (activity.getParticipants() == null) {
                 List<User> users = new ArrayList<>();
                 users.add(participant);
                 activity.setParticipants(users);
-            }else{
+            } else {
                 activity.getParticipants().add(participant);
             }
             activityRepository.save(activity);
-        }else {
+        } else {
             existedParticipateRequest.setStatus(REJECT);
         }
         participateRequestRepository.save(existedParticipateRequest);

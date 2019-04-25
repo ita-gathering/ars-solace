@@ -1,7 +1,9 @@
 package com.approval.service;
 
 import com.approval.dto.AcitivitySearchCriteria;
-import com.approval.po.*;
+import com.approval.po.Activity;
+import com.approval.po.ParticipateRequest;
+import com.approval.po.User;
 import com.approval.repository.ActivityRepository;
 import com.approval.repository.ParticipateRequestRepository;
 import com.approval.repository.UserRepository;
@@ -11,7 +13,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -35,6 +36,7 @@ public class ActivityService {
 
 
     public Activity createActivity(Activity activity) {
+        activity.setRemainCount(activity.getOriginCount());
         return activityRepository.save(activity);
     }
 
@@ -65,21 +67,19 @@ public class ActivityService {
     }
 
     public List<Activity> getActivityByCriteria(AcitivitySearchCriteria searchCriteria) {
-        List<Activity> activities;
         if (searchCriteria.getAuthor() != null) {
             if (searchCriteria.getTitle() == null) {
-                activities = activityRepository.findAllByAuthor(searchCriteria.getAuthor());
-            } else {
-                activities = activityRepository.findAllByTitleLikeAndAuthor(searchCriteria.getTitle(), searchCriteria.getAuthor());
+                return activityRepository.findAllByAuthor(searchCriteria.getAuthor());
             }
-        } else {
-            if (searchCriteria.getTitle() != null) {
-                activities = activityRepository.findAllByTitleLike(searchCriteria.getTitle());
-            } else {
-                activities = activityRepository.findAll();
-            }
+            return activityRepository.findAllByTitleLikeAndAuthor(searchCriteria.getTitle(), searchCriteria.getAuthor());
         }
-        return activities;
+        if (searchCriteria.getTitle() != null) {
+            return activityRepository.findAllByTitleLike(searchCriteria.getTitle());
+        }
+        if (searchCriteria.getParticipant() != null) {
+            return activityRepository.findAllByUserName(searchCriteria.getParticipant());
+        }
+        return activityRepository.findAll();
     }
 
     public String participateActivity(String activityId, String username, String awards) throws JsonProcessingException {
@@ -98,7 +98,7 @@ public class ActivityService {
                 return "has already participate";
             }
         }
-        ParticipateRequest participateRequest = new ParticipateRequest(activityId,activity.getTitle(),username, PENDING);
+        ParticipateRequest participateRequest = new ParticipateRequest(activityId, activity.getTitle(), username, PENDING);
         participateRequest = participateRequestRepository.save(participateRequest);
         messageSender.sendMessageToTopic(OUTPUT_TOPIC, JsonUtils.objectToJson(participateRequest));
         return "";
@@ -108,12 +108,4 @@ public class ActivityService {
         return participateRequestRepository.findAllByUserName(userName);
     }
 
-//    public void updateParticipateStatus(ApprovalTask approvalTask) {
-//        Activity activity = activityRepository.findById(approvalTask.getActivityId()).orElse(null);
-//        ParticipateSituation participateSituation1 = activity.getParticipateSituation().stream()
-//                .filter(participateSituation -> participateSituation.getParticipant().getUserName().equals(approvalTask.getParticipateSituation().getParticipant().getUserName()))
-//                .findFirst().orElse(null);
-//        participateSituation1.setStatus(approvalTask.getParticipateSituation().getStatus());
-//        activityRepository.save(activity);
-//    }
 }
