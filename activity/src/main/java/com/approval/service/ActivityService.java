@@ -7,6 +7,7 @@ import com.approval.po.Activity;
 import com.approval.po.User;
 import com.approval.repository.ActivityRepository;
 import com.approval.repository.UserRepository;
+import com.approval.solace.MessageSender;
 import com.approval.utils.WrappedBeanCopier;
 import org.springframework.stereotype.Service;
 
@@ -26,6 +27,10 @@ public class ActivityService {
     private ActivityRepository activityRepository;
     @Resource
     private UserRepository userRepository;
+    @Resource
+    private MessageSender messageSender;
+    private static final String OUTPUT_TOPIC = "ARS/ACTIVITY";
+
 
     public Activity createActivity(Activity activity) {
         return activityRepository.save(activity);
@@ -102,6 +107,7 @@ public class ActivityService {
             activity.setParticipants(users);
         }
         activityRepository.save(activity);
+        messageSender.sendMessageToTopic(OUTPUT_TOPIC, "send message");
         return "";
     }
 }
