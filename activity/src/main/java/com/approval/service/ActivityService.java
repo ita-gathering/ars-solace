@@ -4,12 +4,15 @@ import com.approval.dto.AcitivitySearchCriteria;
 import com.approval.dto.ActivityDto;
 import com.approval.dto.UserDto;
 import com.approval.po.Activity;
+import com.approval.po.ApprovalTask;
 import com.approval.po.ParticipateSituation;
 import com.approval.po.User;
 import com.approval.repository.ActivityRepository;
 import com.approval.repository.UserRepository;
 import com.approval.solace.MessageSender;
+import com.approval.utils.JsonUtils;
 import com.approval.utils.WrappedBeanCopier;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -64,7 +67,7 @@ public class ActivityService {
         return activity;
     }
 
-    public List<ActivityDto> getActivityByCriteria(AcitivitySearchCriteria searchCriteria) {
+    public List<Activity> getActivityByCriteria(AcitivitySearchCriteria searchCriteria) {
         List<Activity> activities;
         if (searchCriteria.getAuthor() != null) {
             if (searchCriteria.getTitle() == null) {
@@ -79,15 +82,10 @@ public class ActivityService {
                 activities = activityRepository.findAll();
             }
         }
-        List<ActivityDto> activityDtos = WrappedBeanCopier.copyPropertiesOfList(activities, ActivityDto.class);
-        activityDtos.forEach(activityDto -> {
-            List<UserDto> userDtos = WrappedBeanCopier.copyPropertiesOfList(activityDto.getParticipants(), UserDto.class);
-            activityDto.setParticipants(userDtos);
-        });
-        return activityDtos;
+        return activities;
     }
 
-    public String participateActivity(String activityId, String username, String awards) {
+    public String participateActivity(String activityId, String username, String awards) throws JsonProcessingException {
         User user = userRepository.findByUserName(username);
         if (Objects.isNull(user)) {
             return "can not find user";
@@ -112,7 +110,8 @@ public class ActivityService {
             activity.setParticipateSituation(participateSituations);
         }
         activityRepository.save(activity);
-        messageSender.sendMessageToTopic(OUTPUT_TOPIC, "send message");
+        ApprovalTask approvalTask = new ApprovalTask(activityId,participateSituation);
+        messageSender.sendMessageToTopic(OUTPUT_TOPIC, JsonUtils.objectToJson(approvalTask));
         return "";
     }
 }

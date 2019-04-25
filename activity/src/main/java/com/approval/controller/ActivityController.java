@@ -6,6 +6,7 @@ import com.approval.dto.ResponseDto;
 import com.approval.po.Activity;
 import com.approval.service.ActivityService;
 import com.approval.solace.MessageSender;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,7 +76,7 @@ public class ActivityController {
     }
 
     @PatchMapping("/{activityId}")
-    public ResponseDto participateActivity(@PathVariable String activityId, @RequestBody JSONObject jsonObject) {
+    public ResponseDto participateActivity(@PathVariable String activityId, @RequestBody JSONObject jsonObject) throws JsonProcessingException {
         String username = (String) jsonObject.get("userName");
         String awards = (String) jsonObject.get("awards");
         if (Objects.isNull(username)) {
